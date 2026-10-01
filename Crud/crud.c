@@ -8,7 +8,6 @@ struct User {
     int age;
 };
 
-// makes users.txt if it isn't there already
 void createFile() {
     FILE *fp = fopen("users.txt", "a");
     if (fp == NULL) {
@@ -18,7 +17,6 @@ void createFile() {
     fclose(fp);
 }
 
-// add a new user
 void addUser() {
     struct User u, temp;
     FILE *fp;
@@ -26,7 +24,6 @@ void addUser() {
     printf("Enter ID: ");
     scanf("%d", &u.id);
 
-    // check if this id is already used
     fp = fopen("users.txt", "r");
     while (fscanf(fp, "%d,%49[^,],%d ", &temp.id, temp.name, &temp.age) == 3) {
         if (temp.id == u.id) {
@@ -49,7 +46,6 @@ void addUser() {
     printf("User added.\n");
 }
 
-// show all users
 void showUsers() {
     struct User u;
     int count = 0;
@@ -61,7 +57,6 @@ void showUsers() {
     }
 
     printf("\nID\tName\t\tAge\n");
-    printf("--------------------------------\n");
     while (fscanf(fp, "%d,%49[^,],%d ", &u.id, u.name, &u.age) == 3) {
         printf("%d\t%-15s\t%d\n", u.id, u.name, u.age);
         count++;
@@ -73,7 +68,6 @@ void showUsers() {
     fclose(fp);
 }
 
-// update a user by id
 void updateUser() {
     struct User u;
     int id, found = 0;
@@ -98,7 +92,6 @@ void updateUser() {
     fclose(fp);
     fclose(tmp);
 
-    // replace old file with the new one
     remove("users.txt");
     rename("temp.txt", "users.txt");
 
@@ -108,7 +101,6 @@ void updateUser() {
         printf("No user with ID %d\n", id);
 }
 
-// delete a user by id
 void deleteUser() {
     struct User u;
     int id, found = 0;
@@ -121,7 +113,6 @@ void deleteUser() {
 
     while (fscanf(fp, "%d,%49[^,],%d ", &u.id, u.name, &u.age) == 3) {
         if (u.id == id) {
-            found = 1;   // don't write this one, so it gets deleted
         } else {
             fprintf(tmp, "%d,%s,%d\n", u.id, u.name, u.age);
         }
@@ -145,7 +136,7 @@ int main() {
     createFile();
 
     do {
-        printf("\n--- MENU ---\n");
+        printf("\nMENU\n");
         printf("1. Add user\n");
         printf("2. Show users\n");
         printf("3. Update user\n");
@@ -160,7 +151,7 @@ int main() {
             case 3: updateUser(); break;
             case 4: deleteUser(); break;
             case 5: printf("Bye!\n"); break;
-            default: printf("Wrong choice, try again.\n");
+            default: printf("try again.\n");
         }
     } while (choice != 5);
 

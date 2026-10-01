@@ -11,8 +11,6 @@ int main() {
         return 0;
     }
     line[strcspn(line, "\r\n")] = '\0';
-
-    // if the input is wrapped in quotes, drop them
     char *s = line;
     int len = strlen(s);
     if (len >= 2 && s[0] == '"' && s[len - 1] == '"') {
@@ -20,15 +18,15 @@ int main() {
         s++;
     }
 
-    long total = 0;   // sum of finished terms
-    long term = 0;    // term we are currently building (handles * and /)
-    char op = '+';    // operator that came before the current number
+    long total = 0;   
+    long term = 0;   
+    char op = '+';    
     int i = 0;
 
     while (1) {
         while (isspace(s[i])) i++;
 
-        // a number must come here
+       
         if (!isdigit(s[i])) {
             printf("Error: Invalid expression.\n");
             return 0;

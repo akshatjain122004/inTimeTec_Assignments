@@ -2,75 +2,100 @@
 #include <string.h>
 #include <ctype.h>
 
-int main() {
-    printf("Enter an expression: \n");
-    char line[1000];
+int main()
+{
+    char inputLine[1000];
 
-    if (fgets(line, sizeof(line), stdin) == NULL) {
+    printf("Enter an expression: \n");
+
+    if (fgets(inputLine, sizeof(inputLine), stdin) == NULL)
+    {
         printf("Error: Invalid expression.\n");
         return 0;
     }
-    line[strcspn(line, "\r\n")] = '\0';
+    inputLine[strcspn(inputLine, "\r\n")] = '\0';
 
-    
-    char *s = line;
-    int len = strlen(s);
-    if (len >= 2 && s[0] == '"' && s[len - 1] == '"') {
-        s[len - 1] = '\0';
-        s++;
+    char *expression = inputLine;
+    int expressionLength = strlen(expression);
+
+    if (expressionLength >= 2 && expression[0] == '"' && expression[expressionLength - 1] == '"')
+    {
+        expression[expressionLength - 1] = '\0';
+        expression++;
     }
 
-    long total = 0;   
-    long term = 0;    
-    char op = '+';   
-    int i = 0;
+    long totalResult = 0;
+    long currentTerm = 0;
+    char currentOperator = '+';
+    int index = 0;
 
-    while (1) {
-        while (isspace(s[i])) i++;
+    while (1)
+    {
+        while (isspace(expression[index]))
+        {
+            index++;
+        }
 
-        // a number must come here
-        if (!isdigit(s[i])) {
+        if (!isdigit(expression[index]))
+        {
             printf("Error: Invalid expression.\n");
             return 0;
         }
 
-        long num = 0;
-        while (isdigit(s[i])) {
-            num = num * 10 + (s[i] - '0');
-            i++;
+        long currentNumber = 0;
+        while (isdigit(expression[index]))
+        {
+            currentNumber = currentNumber * 10 + (expression[index] - '0');
+            index++;
         }
 
-        if (op == '+') {
-            total += term;
-            term = num;
-        } else if (op == '-') {
-            total += term;
-            term = -num;
-        } else if (op == '*') {
-            term = term * num;
-        } else if (op == '/') {
-            if (num == 0) {
+        if (currentOperator == '+')
+        {
+            totalResult += currentTerm;
+            currentTerm = currentNumber;
+        }
+        else if (currentOperator == '-')
+        {
+            totalResult += currentTerm;
+            currentTerm = -currentNumber;
+        }
+        else if (currentOperator == '*')
+        {
+            currentTerm = currentTerm * currentNumber;
+        }
+        else if (currentOperator == '/')
+        {
+            if (currentNumber == 0)
+            {
                 printf("Error: Division by zero.\n");
                 return 0;
             }
-            term = term / num;
+            currentTerm = currentTerm / currentNumber;
         }
 
-        while (isspace(s[i])) i++;
+        while (isspace(expression[index]))
+        {
+            index++;
+        }
 
-        if (s[i] == '\0')
+        if (expression[index] == '\0')
+        {
             break;
+        }
 
-        if (s[i] == '+' || s[i] == '-' || s[i] == '*' || s[i] == '/') {
-            op = s[i];
-            i++;
-        } else {
+        if (expression[index] == '+' || expression[index] == '-' || expression[index] == '*' || expression[index] == '/')
+        {
+            currentOperator = expression[index];
+            index++;
+        }
+        else
+        {
             printf("Error: Invalid expression.\n");
             return 0;
         }
     }
 
-    total += term;
-    printf("%ld\n", total);
+    totalResult += currentTerm;
+    printf("%ld\n", totalResult);
     return 0;
 }

@@ -14,95 +14,8 @@ struct employee
     int reportsCount;
 };
 
-bool checkIdAvailable(int id, int n, struct employee employee[])
-{
-    for (int j = 0 ; j < n ; j++)
-    {
-        if (id == employee[j].employeeId)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool employeeIdPresent(int id, int n, struct employee employee[])
-{
-    for (int j = 0 ; j < n ; j++)
-    {
-        if (id == employee[j].employeeId)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-void updateManagerReport(int employeeId, int managerId, struct employee employee[], int n)
-{
-    if (managerId == -1)
-    {
-        return;
-    }
-    for (int j = 0; j < n; j++)
-    {
-        if(managerId == employee[j].employeeId)
-        {
-            employee[j].reports[employee[j].reportsCount] = employeeId;
-            employee[j].reportsCount++;
-            return;
-        }
-    }
-}
-
-void addEmployee(struct employee employee[],int *noOfEmployees)
-{
-    static bool ceoExists = false;
-
-    if (*noOfEmployees >= 100)
-    {
-        printf("\nEmployee limit reached. Cannot add more employees.\n");
-        return;
-    }
-
-    int n = *noOfEmployees;
-    printf("\nEnter the Unique Employee ID: ");
-    scanf("%d", &employee[n].employeeId);
-
-    while (!(checkIdAvailable((employee[n].employeeId),n,employee)))
-    {
-        printf("Employee with this ID already exists. Please enter the Unique Employee ID: ");
-        scanf("%d", &employee[n].employeeId);
-    }
-
-    printf("Enter the name of Employee: ");
-    scanf("%99s", employee[n].name);
-    printf("Enter the designation of Employee: ");
-    scanf("%99s", employee[n].designation);
-
-    employee[n].reportsCount = 0;
-
-    printf("Enter the Reporting Manager of the Employee (-1 if no manager): ");
-    scanf("%d", &employee[n].reportingManagerId);
-
-    while ((employee[n].reportingManagerId == -1 && ceoExists) || employee[n].reportingManagerId != -1 && !(employeeIdPresent((employee[n].reportingManagerId),n,employee)))
-    {
-        printf("Employee with this ID does not exists. Please enter the existing Manager ID: ");
-        scanf("%d", &employee[n].reportingManagerId);
-    }
-
-    if (employee[n].reportingManagerId == -1)
-    {
-        ceoExists = true;
-    }
-
-    updateManagerReport(employee[n].employeeId,employee[n].reportingManagerId,employee,n);
-
-    (*noOfEmployees)++;
-
-    printf("\nEmployee added successfully.\n\n");
-}
-
+// Returns the index of the employee with the given ID, or -1 if there is no such employee.
+// Used for both checks: "is this ID already taken?" (result != -1) and "does this employee exist?" (result != -1).
 int getEmployeeIndex(int employeeId, int numberOfEmployees, struct employee employee[])
 {
     for (int index = 0; index < numberOfEmployees; index++)
@@ -115,22 +28,90 @@ int getEmployeeIndex(int employeeId, int numberOfEmployees, struct employee empl
     return -1;
 }
 
-void transferReports(struct employee employee[], int numberOfEmployees, int employeeIndex, int targetIndex)
+void updateManagerReport(int employeeId, int managerId, struct employee employee[], int numberOfEmployees)
+{
+    if (managerId == -1)
+    {
+        return;
+    }
+
+    int managerIndex = getEmployeeIndex(managerId, numberOfEmployees, employee);
+
+    employee[managerIndex].reports[employee[managerIndex].reportsCount] = employeeId;
+    employee[managerIndex].reportsCount++;
+}
+
+void addEmployee(struct employee employee[], int *noOfEmployees)
+{
+    static bool ceoExists = false;
+
+    if (*noOfEmployees >= 100)
+    {
+        printf("\nEmployee limit reached. Cannot add more employees.\n");
+        return;
+    }
+
+    int numberOfEmployees = *noOfEmployees;
+    printf("\nEnter the Unique Employee ID: ");
+    scanf("%d", &employee[numberOfEmployees].employeeId);
+
+    while (getEmployeeIndex(employee[numberOfEmployees].employeeId, numberOfEmployees, employee) != -1)
+    {
+        printf("Employee with this ID already exists. Please enter the Unique Employee ID: ");
+        scanf("%d", &employee[numberOfEmployees].employeeId);
+    }
+
+    printf("Enter the name of Employee: ");
+    scanf("%99s", employee[numberOfEmployees].name);
+    printf("Enter the designation of Employee: ");
+    scanf("%99s", employee[numberOfEmployees].designation);
+
+    employee[numberOfEmployees].reportsCount = 0;
+
+    printf("Enter the Reporting Manager of the Employee (-1 if no manager): ");
+    scanf("%d", &employee[numberOfEmployees].reportingManagerId);
+
+    while ((employee[numberOfEmployees].reportingManagerId == -1 && ceoExists) || employee[numberOfEmployees].reportingManagerId != -1 && getEmployeeIndex(employee[numberOfEmployees].reportingManagerId, numberOfEmployees, employee) == -1)
+    {
+        printf("Employee with this ID does not exists. Please enter the existing Manager ID: ");
+        scanf("%d", &employee[numberOfEmployees].reportingManagerId);
+    }
+
+    if (employee[numberOfEmployees].reportingManagerId == -1)
+    {
+        ceoExists = true;
+    }
+
+    updateManagerReport(employee[numberOfEmployees].employeeId, employee[numberOfEmployees].reportingManagerId, employee, numberOfEmployees);
+
+    (*noOfEmployees)++;
+
+    printf("\nEmployee added successfully.\n\n");
+}
+
+// When an employee is removed, their direct reports must not be left without a manager.
+// This moves every direct report of the removed employee under the new manager
+// and updates each report's reportingManagerId.
+void moveReportsToNewManager(struct employee employee[], int numberOfEmployees, int employeeIndex, int newManagerIndex)
 {
     for (int position = 0; position < employee[employeeIndex].reportsCount; position++)
     {
         int reportId = employee[employeeIndex].reports[position];
         int reportIndex = getEmployeeIndex(reportId, numberOfEmployees, employee);
 
-        employee[reportIndex].reportingManagerId = employee[targetIndex].employeeId;
-        employee[targetIndex].reports[employee[targetIndex].reportsCount] = reportId;
-        employee[targetIndex].reportsCount++;
+        employee[reportIndex].reportingManagerId = employee[newManagerIndex].employeeId;
+        employee[newManagerIndex].reports[employee[newManagerIndex].reportsCount] = reportId;
+        employee[newManagerIndex].reportsCount++;
     }
 }
 
-int findSiblingWithFewestReports(struct employee employee[], int numberOfEmployees, int managerIndex, int employeeId)
+// Finds who takes over the reports of the employee being removed.
+// Rule: the sibling (same manager) with the fewest direct reports.
+// If the employee has no siblings, the employee's own manager takes over.
+// Returns the index of that employee.
+int findAlternativeManager(struct employee employee[], int numberOfEmployees, int managerIndex, int employeeId)
 {
-    int siblingIndex = -1;
+    int alternativeIndex = managerIndex;
     int fewestReports = MAX_EMPLOYEES + 1;
 
     for (int position = 0; position < employee[managerIndex].reportsCount; position++)
@@ -139,19 +120,21 @@ int findSiblingWithFewestReports(struct employee employee[], int numberOfEmploye
 
         if (siblingId != employeeId)
         {
-            int currentIndex = getEmployeeIndex(siblingId, numberOfEmployees, employee);
+            int siblingIndex = getEmployeeIndex(siblingId, numberOfEmployees, employee);
 
-            if (employee[currentIndex].reportsCount < fewestReports)
+            if (employee[siblingIndex].reportsCount < fewestReports)
             {
-                fewestReports = employee[currentIndex].reportsCount;
-                siblingIndex = currentIndex;
+                fewestReports = employee[siblingIndex].reportsCount;
+                alternativeIndex = siblingIndex;
             }
         }
     }
-    return siblingIndex;
+    return alternativeIndex;
 }
 
-void detachFromManager(struct employee employee[], int managerIndex, int employeeId)
+// Deletes the removed employee's ID from their manager's reports list.
+// The entries after it shift one place left, so the list has no gap.
+void removeReportFromManager(struct employee employee[], int managerIndex, int employeeId)
 {
     for (int position = 0; position < employee[managerIndex].reportsCount; position++)
     {
@@ -167,7 +150,8 @@ void detachFromManager(struct employee employee[], int managerIndex, int employe
     }
 }
 
-int countSubordinates(struct employee employee[], int numberOfEmployees, int employeeIndex)
+// Returns the total number of employees under the given employee, at every level (not including the employee).
+int getTotalReportsCount(struct employee employee[], int numberOfEmployees, int employeeIndex)
 {
     int total = 0;
 
@@ -176,12 +160,13 @@ int countSubordinates(struct employee employee[], int numberOfEmployees, int emp
         int reportId = employee[employeeIndex].reports[position];
         int reportIndex = getEmployeeIndex(reportId, numberOfEmployees, employee);
 
-        total = total + 1 + countSubordinates(employee, numberOfEmployees, reportIndex);
+        total = total + 1 + getTotalReportsCount(employee, numberOfEmployees, reportIndex);
     }
     return total;
 }
 
-void displayHierarchyRecursive(struct employee employee[], int numberOfEmployees, int employeeIndex, int level)
+// Prints the employee, then each of their reports below them, indented one level deeper.
+void printHierarchy(struct employee employee[], int numberOfEmployees, int employeeIndex, int level)
 {
     for (int space = 0; space < level; space++)
     {
@@ -194,7 +179,7 @@ void displayHierarchyRecursive(struct employee employee[], int numberOfEmployees
         int reportId = employee[employeeIndex].reports[position];
         int reportIndex = getEmployeeIndex(reportId, numberOfEmployees, employee);
 
-        displayHierarchyRecursive(employee, numberOfEmployees, reportIndex, level + 1);
+        printHierarchy(employee, numberOfEmployees, reportIndex, level + 1);
     }
 }
 
@@ -221,15 +206,10 @@ void removeEmployee(struct employee employee[], int *noOfEmployees)
     }
 
     int managerIndex = getEmployeeIndex(employee[employeeIndex].reportingManagerId, numberOfEmployees, employee);
-    int targetIndex = findSiblingWithFewestReports(employee, numberOfEmployees, managerIndex, employeeId);
+    int newManagerIndex = findAlternativeManager(employee, numberOfEmployees, managerIndex, employeeId);
 
-    if (targetIndex == -1)
-    {
-        targetIndex = managerIndex;
-    }
-
-    transferReports(employee, numberOfEmployees, employeeIndex, targetIndex);
-    detachFromManager(employee, managerIndex, employeeId);
+    moveReportsToNewManager(employee, numberOfEmployees, employeeIndex, newManagerIndex);
+    removeReportFromManager(employee, managerIndex, employeeId);
 
     for (int index = employeeIndex; index < numberOfEmployees - 1; index++)
     {
@@ -240,7 +220,7 @@ void removeEmployee(struct employee employee[], int *noOfEmployees)
     printf("\nEmployee removed successfully.\n\n");
 }
 
-void showEmployeeTree(struct employee employee[], int numberOfEmployees)
+void displayEmployeeHierarchy(struct employee employee[], int numberOfEmployees)
 {
     int employeeId;
 
@@ -262,11 +242,11 @@ void showEmployeeTree(struct employee employee[], int numberOfEmployees)
     }
 
     printf("\n");
-    displayHierarchyRecursive(employee, numberOfEmployees, employeeIndex, 0);
-    printf("\nTotal Employees Under %d: %d\n\n", employeeId, countSubordinates(employee, numberOfEmployees, employeeIndex));
+    printHierarchy(employee, numberOfEmployees, employeeIndex, 0);
+    printf("\nTotal Employees Under %d: %d\n\n", employeeId, getTotalReportsCount(employee, numberOfEmployees, employeeIndex));
 }
 
-void showOrganizationTree(struct employee employee[], int numberOfEmployees)
+void displayCompleteHierarchy(struct employee employee[], int numberOfEmployees)
 {
     if (numberOfEmployees == 0)
     {
@@ -279,8 +259,8 @@ void showOrganizationTree(struct employee employee[], int numberOfEmployees)
         if (employee[index].reportingManagerId == -1)
         {
             printf("\n===== ORGANIZATION HIERARCHY =====\n");
-            displayHierarchyRecursive(employee, numberOfEmployees, index, 0);
-            printf("\nTotal Employees: %d\n\n", 1 + countSubordinates(employee, numberOfEmployees, index));
+            printHierarchy(employee, numberOfEmployees, index, 0);
+            printf("\nTotal Employees: %d\n\n", 1 + getTotalReportsCount(employee, numberOfEmployees, index));
             return;
         }
     }
@@ -314,11 +294,11 @@ int main()
                 break;
 
             case 3:
-                showEmployeeTree(employee, numberOfEmployees);
+                displayEmployeeHierarchy(employee, numberOfEmployees);
                 break;
 
             case 4:
-                showOrganizationTree(employee, numberOfEmployees);
+                displayCompleteHierarchy(employee, numberOfEmployees);
                 break;
 
             case 5:
